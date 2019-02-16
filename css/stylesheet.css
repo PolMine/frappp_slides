@@ -1,0 +1,39 @@
+.gdbar img {
+  width: 200px !important;
+  height: 65px !important;
+  margin: 8px 8px;
+}
+
+.gdbar {
+  width: 337px !important;
+  height: 81px !important;
+}
+
+.scroll {
+  max-height: 100px;
+  float: left;
+  width: 910px;
+  overflow-y: auto;
+}
+
+.scroll {
+  references: 2px !important;
+}
+
+
+slides > slide:not(.nobackground):before {
+  width: 125px;
+  height: 41px;
+  padding-bottom: 20px;
+  background-size: 125px 41px;
+}
+
+pre {
+  max-height: 350px;
+  float: left;
+  overflow-y: auto;
+}
+
+.verysmall {
+   font-size: 0.5em;
+}

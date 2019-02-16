@@ -1,0 +1,566 @@
+---
+title: "Das R-Paket 'frappp'"
+subtitle: "Framework For Parsing Plenary Protocols"
+author: "Andreas Blaette, Christoph Leonhardt"
+date: 'Stand: 15. Februar 2019'
+bibliography: literature.bib
+output:
+  ioslides_presentation:
+    css: css/stylesheet.css
+    logo: img/polmine.png
+    widescreen: yes
+    highlight: tango
+  slidy_presentation: default
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r, eval = TRUE, message = FALSE, echo = FALSE}
+library(magrittr)
+library(annolite)
+library(polmineR)
+library(plotly)
+library(DiagrammeR)
+```
+
+```{r, message = FALSE, echo = FALSE}
+use("GermaParl")
+use("ParisParl")
+use("AustroParl")
+use("PopParl")
+```
+
+
+## Plenarprotokolle als relevante Daten | und als replizierbare Forschungsdaten {.smaller}
+
+* **Plenarprotokolle als zentrale Sprachressource der parlamentarischen Demokratie:**<br/>Und dies trotz Governance und Entparlamentarisierung.
+
+* **Datafizierung (= XMLifizierung) von Plenarprotokollen erforderlich:**<br>Potentiale des Text Mining (der computerunterstützten Inhaltsanalyse, eHumanities) nicht einlösbar mit html/txt/pdf.
+
+* **Ziel der Senkung der Grenzkosten der Datenaufbereitung:**<br/>Technische Einstiegshürden / prohibitiver Aufwand der Datenaufbereitung.<br/>
+
+* **Totale Replizierbarkeit durch "*Framework for Parsing Plenary Protocols" (R-Paket _frapp_):**<br/>Voraussetzung für Qualitätsmanagement und Versionierung.
+
+* **Related Work:** ParlSpeech-Korpora [@Rauh2017], ParlaCLARIN-Workshops[@FIŠER18.14; @PANČUR18.4; @OGRODNICZUK18.11; @WISSIK18.2; @GUNGOR18.19; @NANNI18.6]
+
+* **Anwendungsszenario:** Protokolle der UN-Generalversammlung als universalstes "Parlament"
+
+
+## Grundtechniken der Datenaufbereitung
+
+* OCR (Optical Character Recognition)
+* XML (eXtensible Markup Language)
+* TEI (Standardisierung der Text Encoding Initiative)
+* reguläre Ausdrücke (automatisiertes pattern matching)
+* Programmierung (Perl/Python/Java/R)
+* Objektorientierte Programmierung (=> Framework)
+
+<font size = "4">
+"Ein Framework ist eine semi-vollständige Applikation. Es stellt für Applikationen eine wiederverwendbare, gemeinsame Struktur zur Verfügung. Die Entwickler bauen das Framework in ihre eigene Applikation ein, und erweitern es derart, dass es ihren spezifischen Anforderungen entspricht. Frameworks unterscheiden sich von Toolkits dahingehend, dass sie eine kohärente Struktur zur Verfügung stellen, anstatt einer einfachen Menge von Hilfsklassen." [@Johnson1988]
+</font>
+
+## TEI-Standardisierung | Am Beispiel von GermaParlTEI {.smaller}
+
+* TEI-Standardisierung als Konsens *außerhalb* der Politikwissenschaft (vgl. ParlaCLARIN-Workshops, Projekt Reichstagsprotokolle der BBAW)
+
+* TEI-XML als Datenaustauschformat, *nicht* für konkrete Analysen.
+
+```{r, echo = FALSE}
+xml2::read_xml(x = "/Users/blaette/Nextcloud/Org/Termine/2019-02-14_Dreiländertagung/Präsentation/BT_16_060.xml") %>%
+  as.character() %>% cat()
+```
+
+
+## Workflow im Überblick {.flexbox .vcenter}
+
+```{r, echo = FALSE}
+grViz("
+digraph boxes_and_circles {
+
+  graph [overlap = true, fontsize = 10, rankdir = LR]
+
+  node [shape = circle, fillcolor = green, fontname = Helvetica]
+  Vorverarbeitung
+
+  node [shape = circle, fontname = Helvetica]
+  XMLifizierung
+
+  node [shape = circle, fontname = Helvetica]
+  Indizierung
+
+  Vorverarbeitung -> XMLifizierung
+  XMLifizierung -> Indizierung
+}
+")
+```
+
+## Vorverarbeitung: Vom pdf- zum txt-Dokument {.smaller}
+
+- Grundlegende Herausforderungen bei der Verarbeitung von pdf-Dokumenten (abgesehen von OCR-Problematik): mehrspaltiges Layout, Kolumnentitel, Marginalien etc.
+  
+- Standard-Tools zur pdf-Verarbeitung ([Rpoppler](https://CRAN.R-project.org/package=Rpoppler), [pdftools](https://cran.r-project.org/package=pdftools)) nur beschränkt geeignet für genannte Probleme.
+
+- Lösung des R-Pakets _trickypdf_ (verfügbar bei [GitHub](https://github.com/PolMine/trickypdf)): Umwandlung von pdf in XML-Format ...
+  * Koordinaten von Text werden im XML "aufbewahrt"
+  * Extraktion von gewolltem Text bzw. Löschen von anhand von Koordinaten von Text-Rahmen.
+
+```{r load_trickypdf, message = FALSE}
+library(trickypdf)
+doc <- system.file(package = "trickypdf", "extdata", "pdf", "UN_GeneralAssembly_2016.pdf")
+
+UN <- trickypdf::PDF$new(filename_pdf = doc)
+UN$add_box(page = 1, box = c(top = 232, height = 400, left = 52, width = 255))
+UN$add_box(page = 1, box = c(top = 232, height = 400, left = 303, width = 255), replace = FALSE)
+UN$add_box(page = 2, box = c(top = 80, height = 595, left = 52, width = 255))
+UN$add_box(page = 2, box = c(top = 80, height = 595, left = 303, width = 255), replace = FALSE)
+UN$get_text_from_boxes(paragraphs = FALSE)
+```
+
+
+
+## Beispieldokument im _trickypdf_-Paket | Erste Sitzung der UN Generalversammlung von 2016 (A/71/PV.1)
+
+<embed src="./pdf/UN_GeneralAssembly_2016.pdf" width = "1000" height = "450"/>
+
+
+## Zwischenstand: 'plain text' {.smaller}
+
+* Nach dem Einsatz von *trickypdf* haben wir eine 'plain text'-Version des Ausgangsmaterials erreicht.
+
+```{r save_plaintext_doc}
+plaintext <- UN$pages %>% unlist() %>% unname()
+```
+
+<div style="height:170px;width:950px;padding-bottom:20px;border:1px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;">
+`r paste(plaintext, collapse = "</br>")`
+</div>
+<br/>
+
+* Als Grundlage des weiteren Aufbereitungs-Workflows wird die 'plain text'-Fassung des Protokolls gespeichert.
+
+```{r}
+undoc_tmp <- tempfile()
+writeLines(text = plaintext, con = undoc_tmp)
+```
+
+
+## Das R-Paket 'frappp' {.smaller}
+
+* Für das Design des _frappp_-Pakets ist eine **objektorientiertes Design** von grundlegender Bedeutung. Durch die Prinzipien der **Vererbung** ermöglicht objektorientierte Programmierung eine effizente Implementierung. (Übertragbarkeit des Designs nach Python, Java.)
+
+* Im _frappp_-Paket Entscheidung für R6-Klassensystem:
+  - Übersichtliche Organisation von Code für stark standardisierte Workflows (im Vergleich zu S3, S4)
+  - sparsame Speichernutzung durch Referenzlogik: Kein ständiges Hin- und Herkopieren von großen Objekten im Speicher (wie bei S3, S4)#
+  - Effizienz von R6 im Vergleich zu RefClass (vgl. entsprechend [benchmarks](https://cran.r-project.org/web/packages/R6/vignettes/Performance.html))
+  - Möglichkeit der Erweiterung von R6-Klassen über Paket-Grenzen hinweg: _frappp_-Paket als Basis für konkrete Korpus-Aufbereitungsprojekte.
+
+* Die zentrale Klasse zur Verarbeitung  _PlenaryProtocolParser_-Klasse. Diese steht nach dem Laden des Pakets zur Verfügung.
+
+```{r load_frap, warning = FALSE, message = FALSE}
+library(frappp)
+PPP <- PlenaryProtocolParser$new()
+```
+
+
+## Parser-Konfiguration I: Sprecher-Erkennung {.smaller}
+
+* Dieser Parser wird zunächst konfiguriert durch reguläre Ausdrücke für die Erkennung von Sprechern.
+
+* Flankierend: Funktion, welche die erkannten Informationen ergänzt und standardisiert.
+
+```{r, echo = FALSE}
+sg <- list(
+      regex = "^(The\\sSecretary-General):\\s*(.+)$",
+      fn = function(df){
+        data.frame(
+          who = df[,2],
+          state = "NA",
+          role = "secretary-general",
+          position = "secretary-general",
+          text = df[,3],
+          stringsAsFactors = FALSE
+        )
+      }
+    )
+```
+
+
+```{r, echo = TRUE}
+pres <- list(
+  regex = "^(The\\s+President):\\s*(.+)$",
+  fn = function(df){
+    data.frame(
+      who = df[,2], state = "NA", role = "presidency", position = "presidency", text = df[,3],
+      stringsAsFactors = FALSE
+    )
+  }
+)
+PPP$speaker_regex <- list(pres = pres, sg = sg )
+```
+
+* Den optimalen regulären Ausdruck, der immer alles richtig trifft zu finden ist nahezu unmöglich. Ein pragmatischer Weg ist die Nutzung von Fehltreffer-Listen.
+
+```{r}
+PPP$speaker_mismatch <- character()
+```
+
+
+## Parser-Konfiguration II: TOPs & Szenen {.smaller}
+
+* Zur Erkennung von Tagesordnungspunkten werden ebenfalls reguläre Ausdrücke verwendet
+
+```{r agenda_item_regex}
+PPP$agenda_item_regex <- c(any = "^Item\\s+\\d+\\sof.*agenda.*$")
+PPP$agenda_item_types <- c(any = "debate")
+```
+
+* Auch die Erkennung on Szenenhinweisen basiert auf regulären Ausdrücken.
+
+```{r stage_regex}
+PPP$stage_regex <- c(
+  end_of_session = "^\\s*The\\s+meeting\\s+rose\\s+at\\s+\\d+\\s[ap]\\.m\\.\\s*$"
+)
+```
+
+* Dabei wird die Möglichkeit in Betracht gezogen, dass sich Szenenhinweise über mehrere Zeilen erstrecken können.
+
+```{r stage_instructions}
+PPP$stage_match_n_lines <- 2L
+```
+
+
+## Parser-Konfiguration III: Metadaten {.smaller}
+
+* Erforderlich ist noch eine Extraktion von Metadaten (wird hier nicht angezeigt). Diese werden aus dem ursprünglichen pdf-Dokument gezogen.
+
+
+```{r, echo = FALSE}
+get_metadata <- function(filename){
+  pdfdoc <- pdftools::pdf_text(pdf = doc)
+  page1 <- strsplit(pdfdoc, "\n")[[1]]
+  
+  # get session
+  docIdRegex <- "^.*?\\s*(A)\\s*/(\\d+)/\\s*(PV\\.\\d+).*?$"
+  session <- do.call(rbind, gsubfn::strapplyc(X = page1, pattern = docIdRegex))[1,2]
+  
+  # get date
+  weekdays = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+  months = c(
+    January = 1, February = 2, March = 3, April = 4, May = 5, June = 6,
+    July = 7, August = 8, September = 9, October = 10, November = 11, December = 12
+    )
+  dateRegex <- sprintf(
+    "^\\s*(%s),\\s*(\\d{1,2})\\s+(%s)\\s+(\\d{4}),\\s+\\d{1,2}\\.\\d{2}\\s+(a\\.m\\.|p\\.m\\.)\\s*$",
+    paste0(weekdays, collapse = "|"),
+    paste0(names(months), collapse = "|")
+  )
+  dateMatch <- do.call(rbind, gsubfn::strapply(page1, pattern = dateRegex, c))
+  year <- dateMatch[1,4]
+  month <- as.integer(months[dateMatch[1,3]])
+  day <- as.integer(dateMatch[1,2])
+  dateOfMeeting <- sprintf("%s-%02d-%02d", year, month, day)
+  
+  # get meeting
+  meetingRegex <- "\\s+(\\d+)(st|nd|rd|th)\\s+plenary\\s+meeting\\s*$"
+  meeting <- do.call(rbind, gsubfn::strapplyc(page1, pattern = meetingRegex))[1,1]
+  
+  list(
+    legislativePeriod = as.integer(session),
+    sessionNo = as.integer(meeting),
+    date = as.Date(dateOfMeeting),
+    retrievalDate = "unknown",
+    filetype = "pdf",
+    url = "http://www.un.org/en/ga/",
+    publisher = "United Nations",
+    title = "Verbatim Records of the United Nations"
+  )
+}
+```
+
+```{r}
+metadata <- get_metadata(doc)
+```
+
+```{r, echo = FALSE}
+t(as.data.frame(metadata)) %>% DT::datatable(options = list(pageLength = 6L))
+```
+
+
+## Dokument-Verarbeitung (mit Method-Chaining)
+
+* Es erfolgt eine standardisierte Abfolge von Verarbeitungsschritten. Diese können verkettet durchgeführt werden ("method chaining"-Technik).
+
+```{r}
+PPP$
+  read_file(filename = undoc_tmp, id = "A/71/PV.1")$
+  add_metadata(metadata = get_metadata(doc))$  # Metadaten-Extraktion
+  preprocessing()$                             # Vorverarbeitung: Entfernen von 
+  split_by_speakers()$                         # Chunking: Zerlegung Text nach Sprechern
+#  detect_stage_regex_matches()$               # Erkennung von Szenenhinweisen
+  reconstruct_paragraphs(exclude = "pres")$    # Absatz-Rekonstruktion
+  make_header()$                               # Befüllen XML-Template Metadaten
+  make_body()$                                 # Befüllen XML-Template mit Text
+  save_xml(filename = tempfile())
+```
+
+
+
+
+## Definition dokumentspezifischer Klassen {.smaller}
+
+- Eine neuen Klasse `VerbatimRecordUNGA`, die von der `PlenaryProtocolParser`-Klasse erbt, kombiniert nun die als spezifische Methoden für eine Materialart `$initialize()` (definiert reguläre Ausdrücke, Fehltreffer-Listen), `$get_metadata()` (Metadaten-Extraktion), `$xmlify()` (Standard-Ablauf für Dokument-Verarbeitung).
+
+
+```{r load_R6, echo = TRUE, class.output = "scroll"}
+library(R6)
+VerbatimRecordUNGA <- R6Class(
+  "VerbatimRecordUNGA",
+  inherit = PlenaryProtocolParser,
+  public = list(
+    
+    initialize = function(){
+      self$xpath = teiXpath
+      self$speaker_regex <- list(
+        pres = list(
+          regex = "^(The\\s+President):\\s*(.+)$",
+          fn = function(df){
+            data.frame(
+              who = df[,2], state = "NA", role = "presidency", position = "presidency",
+              text = df[,3], stringsAsFactors = FALSE
+            )
+          }
+        ),
+        sg = list(
+          regex = "^(The\\sSecretary-General):\\s*(.+)$",
+          fn = function(df){
+            data.frame(
+              who = df[,2], state = "NA", role = "secretary-general", position = "secretary-general",
+              text = df[,3], stringsAsFactors = FALSE
+            )
+          }
+        )
+      )
+      self$speaker_mismatch <- character()
+      self$agenda_item_regex <- c(any = "^Item\\s+\\d+\\sof.*agenda.*$")
+      self$agenda_item_types <- c(any = "debate")
+      self$stage_regex <- c(end_of_session = "^\\s*The\\s+meeting\\s+rose\\s+at\\s+\\d+\\s[ap]\\.m\\.\\s*$")
+      invisible(self)
+    },
+    
+    get_metadata = function(filename){
+      pdfdoc <- pdftools::pdf_text(pdf = doc)
+      page1 <- strsplit(pdfdoc, "\n")[[1]]
+      
+      # get session
+      docIdRegex <- "^.*?\\s*(A)\\s*/(\\d+)/\\s*(PV\\.\\d+).*?$"
+      session <- do.call(rbind, gsubfn::strapplyc(X = page1, pattern = docIdRegex))[1,2]
+      
+      # get date
+      weekdays = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+      months = c(
+        January = 1, February = 2, March = 3, April = 4, May = 5, June = 6,
+        July = 7, August = 8, September = 9, October = 10, November = 11, December = 12
+      )
+      dateRegex <- sprintf(
+        "^\\s*(%s),\\s*(\\d{1,2})\\s+(%s)\\s+(\\d{4}),\\s+\\d{1,2}\\.\\d{2}\\s+(a\\.m\\.|p\\.m\\.)\\s*$",
+        paste0(weekdays, collapse = "|"),
+        paste0(names(months), collapse = "|")
+      )
+      dateMatch <- do.call(rbind, gsubfn::strapplyc(page1, pattern = dateRegex))
+      year <- dateMatch[1,4]
+      month <- as.integer(months[dateMatch[1,3]])
+      day <- as.integer(dateMatch[1,2])
+      dateOfMeeting <- sprintf("%s-%02d-%02d", year, month, day)
+      
+      # get meeting
+      meetingRegex <- "\\s+(\\d+)(st|nd|rd|th)\\s+plenary\\s+meeting\\s*$"
+      meeting <- do.call(rbind, gsubfn::strapplyc(page1, pattern = meetingRegex))[1,1]
+      
+      list(
+        legislativePeriod = as.integer(session),
+        sessionNo = as.integer(meeting),
+        date = as.Date(dateOfMeeting),
+        retrievalDate = "unknown",
+        filetype = "pdf",
+        url = "http://www.un.org/en/ga/",
+        publisher = "United Nations",
+        title = "Verbatim Records of the United Nations"
+      )
+    },
+
+    xmlify = function(id, txtfile, pdffile, xmlfile, verbose = TRUE){
+      metadata <- self$get_metadata(pdffile)
+      self$read_file(filename = txtfile, id = id)
+      self$add_metadata(metadata = metadata)
+      self$make_header()
+      self$preprocessing()
+      self$split_by_speakers()
+#     self$detect_stage_regex_matches()
+      self$reconstruct_paragraphs(exclude = "pres")
+      self$make_body()
+      self$save_xml(filename = xmlfile)
+      invisible(self$xml)
+    }
+  )
+)
+```
+
+
+## Serienproduktion: Stapelverarbeitung {.smaller}
+
+* Die `VerbatimRecordUNGA`-Klasse ist ein kompakter "engine" zur Dokument-Verarbeitung.
+
+```{r, message = FALSE}
+UNGAParser <- VerbatimRecordUNGA$new()
+teifile <- tempfile()
+tei <- UNGAParser$xmlify(id = "A/71/PV.1", txtfile = undoc_tmp, pdffile = doc, xmlfile = teifile)
+```
+
+
+* Der Mehraufwand für einen Übergang zur Stapelverarbeitung vieler Dokumente ist nun minimal.
+
+```{r processing_multiple_docs, message = FALSE}
+pdfdir <- tempdir(); txtdir <- tempdir(); xmldir <- tempdir()
+txtFilesToProcess <- Sys.glob(paths = sprintf("%s/*.txt", txtdir))
+
+UNGAParser <- VerbatimRecordUNGA$new()
+
+for (file in txtFilesToProcess){
+  UNGAParser$xmlify(
+    id = basename(txtfile),
+    txtfile = txtfile,
+    pdffile = file.path(pdfdir, gsub("^(.*?)\\.txt$", "\\1.pdf", basename(txtfile))),
+    xmlfile = file.path(pdfdir, gsub("^(.*?)\\.txt$", "\\1.xml", basename(txtfile)))
+  )
+}
+```
+
+
+## Workflow Datenkonsolidierung {.flexbox .vcenter}
+
+```{r, echo = FALSE}
+grViz("
+digraph boxes_and_circles {
+
+  graph [overlap = true, fontsize = 10, rankdir = TD]
+
+
+  Vorverarbeitung -> Sprechererkennung
+  Sprechererkennung -> Zwischenruferkennung
+  Zwischenruferkennung -> Tagesordnungspunkterkennung
+  Tagesordnungspunkterkennung -> Absatzrekonstruktion
+  Absatzrekonstruktion -> TEI
+  TEI -> Sprecherkonsolidierung
+  HTML -> Qualitätskontrolle
+  
+  Qualitätskontrolle -> Vorverarbeitung
+  Qualitätskontrolle -> Sprechererkennung
+  Qualitätskontrolle -> Zwischenruferkennung
+  Qualitätskontrolle -> Absatzrekonstruktion
+  Qualitätskontrolle -> Tagesordnungspunkterkennung
+  Qualitätskontrolle -> Sprecherkonsolidierung
+  Sprecherkonsolidierung -> HTML
+
+}
+")
+```
+
+
+## Datenbericht UNGA (N = `r size("UNGA")`) {.flexbox .vcenter}
+
+```{r data_repoirt_unga, echo = FALSE, message = FALSE}
+par(mar = c(0,0,0,8))
+dt <- size("UNGA", s_attribute = "date")[date != "NA"]
+dt[, "year" := gsub("^(\\d{4})-.*?$", "\\1", dt$date)]
+dt <- dt[, {list(size = sum(.SD[["size"]]))}, by = "year"]
+dt[, "year" := as.integer(year)]
+
+plot_ly(x = dt[["year"]], y = dt[["size"]], type = "bar") %>%
+  layout(xaxis = list(categoryorder = "array", categoryarray = dt[["size"]])) %>%
+  layout(margin = list(b = 170), xaxis = list(tickangle = -90))
+
+```
+
+## Datenbericht GermaParl (N = `r size("GERMAPARL")`) {.flexbox .vcenter}
+
+```{r data_report_germaparl, echo = FALSE, message = FALSE, cache = FALSE}
+par(mar = c(0,0,0,8))
+dt <- size("GERMAPARL", s_attribute = "year")
+
+plot_ly(x = dt[["year"]], y = dt[["size"]], type = "bar") %>%
+  layout(xaxis = list(categoryorder = "array", categoryarray = dt[["size"]])) %>%
+  layout(margin = list(b = 170), xaxis = list(tickangle = 66))
+```
+
+
+## Datenbericht AustroParl (N = `r size("AUSTROPARL")`) {.flexbox .vcenter}
+
+```{r data_report_austroparl, echo = FALSE, message = FALSE, cache = FALSE}
+par(mar = c(0,0,0,8))
+dt <- size("AUSTROPARL", s_attribute = "date")[date != "NA"]
+dt[, "year" := gsub("^(\\d{4})-.*?$", "\\1", dt$date)]
+dt <- dt[, {list(size = sum(.SD[["size"]]))}, by = "year"]
+dt[, "year" := as.integer(year)]
+
+plot_ly(x = dt[["year"]], y = dt[["size"]], type = "bar") %>%
+  layout(xaxis = list(categoryorder = "array", categoryarray = dt[["size"]])) %>%
+  layout(margin = list(b = 170), xaxis = list(tickangle = -90))
+```
+
+## Datenbericht ParisParl  (N = `r size("PARISPARL")`) {.flexbox .vcenter}
+
+```{r data_report_parisparl, echo = FALSE, message = FALSE, cache = FALSE}
+par(mar = c(0,0,0,8))
+dt <- size("PARISPARL", s_attribute = "date")[date != "NA"]
+dt[, "year" := gsub("^(\\d{4})-.*?$", "\\1", dt$date)]
+dt <- dt[, {list(size = sum(.SD[["size"]]))}, by = "year"]
+dt[, "year" := as.integer(year)]
+
+plot_ly(x = dt[["year"]], y = dt[["size"]], type = "bar") %>%
+  layout(xaxis = list(categoryorder = "array", categoryarray = dt[["size"]])) %>%
+  layout(margin = list(b = 170), xaxis = list(tickangle = -90))
+```
+
+
+```{r, echo = FALSE}
+popparl_corpora <- system.file(package = "PopParl", "extdata", "cwb", "registry") %>%
+  list.files() %>%
+  toupper()
+sizes <- sapply(popparl_corpora, size)
+dt <- data.table(parliament = names(sizes), size = unname(sizes))
+```
+
+## Datenbericht FedParl (N = `r sum(dt$size)`) {.flexbox .vcenter}
+
+```{r, echo = FALSE}
+plot_ly(x = dt[["parliament"]], y = dt[["size"]], type = "bar") %>%
+  layout(xaxis = list(categoryorder = "array", categoryarray = dt[["size"]])) %>%
+  layout(margin = list(b = 170), xaxis = list(tickangle = -90))
+
+```
+
+
+## Perspektiven {.smaller}
+
+* Niedrige Grenzkosten des Parsings weiterer Materialien: *frappp* unterstützt Politikwissenschaft auf dem Weg in eine "datenreiche Zukunft" [@King2011EnsuringTD]
+
+* 100%-Replizierbarkeit der Forschungsdaten:
+  - vollständige Transparenz der Datenaufbereitung.
+  - Voraussetzung für Versionierung und Qualitätssicherung.
+
+* Versionierung der Daten:
+  - In *git*-Repositorien (GitHub, GitLab)
+  - DOI-Versionierung bei Zenodo
+
+* Generischer, portierbarer Workflow (Alternativen zu R: Python, Java)
+
+* frappp oder frapp (Framework for Parsing Protocols): Anwendbarkeit auf *jegliches* Protokoll (nicht nur eines parlamentarischen Plenums, sondern auch Ausschüsse)
+
+* Übertragbarkeit des Designs auf weitere Materialarten (parlamentarischer Fragen)
+
+
+## Literatur {.verysmall}
+
+
+
