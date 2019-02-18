@@ -40,9 +40,9 @@ use("PopParl")
 
 * **Ziel der Senkung der Grenzkosten der Datenaufbereitung:**<br/>Technische Einstiegshürden / prohibitiver Aufwand der Datenaufbereitung.<br/>
 
-* **Totale Replizierbarkeit durch "*Framework for Parsing Plenary Protocols" (R-Paket _frapp_):**<br/>Voraussetzung für Qualitätsmanagement und Versionierung.
+* **Totale Replizierbarkeit durch "Framework for Parsing Plenary Protocols" (R-Paket _frapp_):**<br/>Voraussetzung für Qualitätsmanagement und Versionierung.
 
-* **Related Work:** ParlSpeech-Korpora [@Rauh2017], ParlaCLARIN-Workshops[@FIŠER18.14; @PANČUR18.4; @OGRODNICZUK18.11; @WISSIK18.2; @GUNGOR18.19; @NANNI18.6]
+* **Related Work:** ParlSpeech-Korpora [@Rauh2017], ParlaCLARIN-Workshops [@FIŠER18.14; @PANČUR18.4; @OGRODNICZUK18.11; @WISSIK18.2; @GUNGOR18.19; @NANNI18.6]
 
 * **Anwendungsszenario:** Protokolle der UN-Generalversammlung als universalstes "Parlament"
 
