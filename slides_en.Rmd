@@ -1,8 +1,8 @@
 ---
-title: "The R package 'frappp'"
-subtitle: "Framework For Parsing Plenary Protocols"
+title: "The Framework For Parsing Plenary Protocols (frappp)"
+subtitle: "Why parlaTEI matters"
 author: "Andreas Blaette, Christoph Leonhardt"
-date: 'May 22, 2019'
+date: 'May 23, 2019'
 bibliography: literature.bib
 output:
   ioslides_presentation:
@@ -34,37 +34,38 @@ use("PopParl")
 
 ## The XMLification of plenary protocols {.smaller}
 
-* **Plenary protocols are a crucial language resource of parliamentary democracy:**<br/>Governance and hollowing out - parliaments still matter.
+* **Plenary protocols - a crucial language resource of parliamentary democracy:**<br/>Governance and globalisation - parliaments still matter => Datafication(= XMLification) of plenary protocols required! (html/txt/pdf not enough to leverage the potential of eHumanities/text mining/computer-assisted content analysis).
 
-* **Datafication(= XMLification) of plenary protocols required:**<br>html/txt/pdf are not enough to leverage the potential of text mining/computer-assisted content analysis.
+* **"Framework for Parsing Plenary Protocols" (R package _frappp_) ensures total replicability:**<br/>Replication as a precondition for quality management and improving the data from version to version. Protocols of the UN General Assembly as the most universal "parliament" we have and as use case for frappp.
 
-* **Lowering the marginal costs of preparing corpora of parliamentary protocols:**<br/>Technical requirements / programming skills to prepare high-quality corpora not to be underestimated.<br/>
-
-* **"Framework for Parsing Plenary Protocols" (R package _frappp_) ensures total replicability:**<br/>Replication as a precondition for quality management and improving the data from version to version.
+* **Need for agreed-upon TEI format for parliamentary protocols**: The 'frappp' output is a preliminary TEI "invented" in the PolMine Project. Interoperability (cp. FAIR-principles) will win if we attain consensus on TEI specification: potential of teiParla!
 
 * **Related Work:** ParlSpeech-corpora [@Rauh2017], ParlaCLARIN Workshops [@FIŠER18.14; @PANČUR18.4; @OGRODNICZUK18.11; @WISSIK18.2; @GUNGOR18.19; @NANNI18.6]
 
-* **Use case for 'frappp':** Protocols of the UN General Assembly as the most universal "parliament" we have.
 
+## Corpus preparation: Technical requirements {.smaller}
 
-## Basic Techniques of corpus preparation
-
-* OCR (Optical Character Recognition)
-* XML (eXtensible Markup Language)
-* TEI (Text Encoding Initiative)
-* regular expressions (automated pattern matching)
-* programming in general (Perl/Python/Java/R)
-* object-oriented programming (=> framework)
+* Technical requirements / programming skills to prepare high-quality corpora are not to be underestimated:
+  - OCR (Optical Character Recognition)
+  - XML (eXtensible Markup Language)
+  - TEI (Text Encoding Initiative)
+  - regular expressions (automated pattern matching)
+  - programming in general (Perl/Python/Java/R)
+  
+* To reduce necessities to re-invent the wheel in new corpus preparation projects, the 'frappp' package uses techniques of object-oriented programming and offers a framework that runs the user through the corpus preparation workflow:
 
 <font size = "4">
 "A framework provides a reusable, common structure to share among applications. Developers incorporate the framework into their own application and extend it to meet their specific needs. Frameworks differ from toolkits by providing a coherent structure, rather than a simple set of utility classes." [@Johnson1988]
 </font>
 
-## The TEI standard | GermaParlTEI as an example {.smaller}
- 
-* consensus on TEI (cp. ParlaCLARIN Workshops, "Reichstagsprotokolle" of BBAW) - but not common in political science
 
-* TEI-XML is useful for standardization, a data exchange format, to ensure interoperability (cp. FAIR principles) - it is not necessarily useful (= slow) for analysis
+## A (preliminary) TEI standard | GermaParlTEI as an example {.smaller}
+ 
+* There is a consensus that TEI standardization is desirable (cp. ParlaCLARIN Workshops, "Reichstagsprotokolle"-project of BBAW) - but there is not yet a specification for parliamentary protocols
+
+* TEI-XML is useful for standardization, as a data exchange format, to ensure interoperability (cp. FAIR principles) - it is not necessarily appropriate (i.e. slow) for analysis.
+
+* The GermaParl corpus ([available at GitHub](https://github.com/PolMine/GermaParlTEI)) implements a preliminary TEI for parliamentary protocols...
 
 ```{r, echo = FALSE}
 xml2::read_xml(x = "~/Nextcloud/Org/Termine/2019-02-14_Dreiländertagung/Präsentation/BT_16_060.xml") %>%
@@ -155,7 +156,7 @@ writeLines(text = plaintext, con = undoc_tmp)
   - R6 is more efficient than R's default RefClasses (cp. [benchmarks](https://cran.r-project.org/web/packages/R6/vignettes/Performance.html))
   - R6 classes can be extended across packages: The _frappp_ package is intended to serve as a basis for substantive projects of corpus preparation.
 
-* The core class is the  _PlenaryProtocolParser_. It is available after loading the package.
+* The core class is the  _PlenaryProtocolParser_. It is the core pillar to offer a framework for parsing plenary protocols. It is available after loading the package.
 
 ```{r load_frap, warning = FALSE, message = FALSE}
 library(frappp)
@@ -167,7 +168,7 @@ PPP <- PlenaryProtocolParser$new()
 
 * The parser needs to be configured by assigning regular expressions for recognizing speakers.
 
-* Need to define supplementary functions to augment and standardize matched information.
+* We need to define supplementary functions to augment and standardize matched information.
 
 ```{r, echo = FALSE}
 sg <- list(
@@ -199,14 +200,14 @@ pres <- list(
 PPP$speaker_regex <- list(pres = pres, sg = sg )
 ```
 
-* According to our experience, the quest for the ideal regular expression that never causes a mismatch is futile. So we may define a vector with mismatches.
+* The quest for the ideal regular expression that never causes a mismatch is futile. So we may define a vector with mismatches (left empty in this example).
 
 ```{r}
 PPP$speaker_mismatch <- character()
 ```
 
 
-## Configuring the parser II: Agenda items & stage instructions {.smaller}
+## Configuring the parser II: Agenda & interjections {.smaller}
 
 * To recognize agenda items, we also define regular expressions.
 
@@ -215,7 +216,7 @@ PPP$agenda_item_regex <- c(any = "^Item\\s+\\d+\\sof.*agenda.*$")
 PPP$agenda_item_types <- c(any = "debate")
 ```
 
-* And we define regular expressions to detect stage instructions.
+* And we define regular expressions to detect stage instructions (e.g. interjections).
 
 ```{r stage_regex}
 PPP$stage_regex <- c(
@@ -232,8 +233,7 @@ PPP$stage_match_n_lines <- 2L
 
 ## Configuring the parser III: Metadata {.smaller}
 
-* Extracting the metadata is still necessary (not shown here). We extract it from the original pdf document.
-
+* Extracting the metadata is still necessary (not shown here). We extract it from the original pdf document using a dedicated function.
 
 ```{r, echo = FALSE}
 get_metadata <- function(filename){
@@ -289,7 +289,7 @@ t(as.data.frame(metadata)) %>% DT::datatable(options = list(pageLength = 6L))
 
 ## Processing a single document (using method chaining)
 
-* The following standardized chain of processing can now be executed ("method chaining").
+* The following standardized chain of processing can be executed once the parser is configured ("method chaining").
 
 ```{r}
 PPP$
@@ -410,7 +410,7 @@ VerbatimRecordUNGA <- R6Class(
 
 ## Scaling up {.smaller}
 
-* The `VerbatimRecordUNGA` class is an "engine" for processing a document.
+* The `VerbatimRecordUNGA` class is a reusable "engine" for processing a document.
 
 ```{r, message = FALSE}
 UNGAParser <- VerbatimRecordUNGA$new()
@@ -483,7 +483,6 @@ plot_ly(x = dt[["year"]], y = dt[["size"]], type = "bar") %>%
 ```
 
 
-
 ## Data report GermaParl (N = `r size("GERMAPARL")`) {.flexbox .vcenter}
 
 ```{r data_report_germaparl, echo = FALSE, message = FALSE, cache = FALSE}
@@ -504,6 +503,7 @@ sizes <- sapply(popparl_corpora, size)
 dt <- data.table(parliament = names(sizes), size = unname(sizes))
 ```
 
+
 ## Data report FedParl (N = `r sum(dt$size)`) {.flexbox .vcenter}
 
 ```{r, echo = FALSE}
@@ -520,7 +520,7 @@ plot_ly(x = dt[["parliament"]], y = dt[["size"]], type = "bar") %>%
 
 * 100% replicability of research data:
   - complete transparency of data preparation.
-  - preconditions fulfilled for versioning data and for quality management.
+  - full automation and replicability is a precondition for versioning data and for continuous quality improvement
 
 * Versioning the data:
   - In *git*-repositories (GitHub, GitLab)
@@ -531,6 +531,8 @@ plot_ly(x = dt[["parliament"]], y = dt[["size"]], type = "bar") %>%
 * frappp or frapp (framework for parsing protocols): Applicability on *any* protocol (not just plenary sessions, but also committees)
 
 * A procedure that can be transferred to XMLify other materials, such as parliamentary questions?
+
+* As mentioned initially, a agreed-upon TEI standard (parlaTEI) will ensure full interoperability!
 
 
 ## Bibliography {.verysmall}
