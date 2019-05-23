@@ -287,7 +287,7 @@ t(as.data.frame(metadata)) %>% DT::datatable(options = list(pageLength = 6L))
 ```
 
 
-## Processing a single document (using method chaining)
+## Processing a single document
 
 * The following standardized chain of processing can be executed once the parser is configured ("method chaining").
 
