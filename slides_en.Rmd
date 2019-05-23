@@ -2,7 +2,7 @@
 title: "The Framework For Parsing Plenary Protocols (frappp)"
 subtitle: "Why parlaTEI matters"
 author: "Andreas Blaette, Christoph Leonhardt"
-date: 'May 23, 2019'
+date: 'May 23, 2019 (DOI: 10.5281/zenodo.3199143)'
 bibliography: literature.bib
 output:
   ioslides_presentation:

@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/170990155.svg)](https://zenodo.org/badge/latestdoi/170990155)
+
 # Introducing the Framework for Parsing Plenary Protocols (R package frappp): Rmarkdown / html slides
 
 ## Background
