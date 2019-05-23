@@ -34,13 +34,13 @@ use("PopParl")
 
 ## The XMLification of plenary protocols {.smaller}
 
-* **Plenary protocols are a crucial language ressource of parliamentary democracy:**<br/>Governance and hollowing out - parliaments still matter.
+* **Plenary protocols are a crucial language resource of parliamentary democracy:**<br/>Governance and hollowing out - parliaments still matter.
 
 * **Datafication(= XMLification) of plenary protocols required:**<br>html/txt/pdf are not enough to leverage the potential of text mining/computer-assisted content analysis.
 
 * **Lowering the marginal costs of preparing corpora of parliamentary protocols:**<br/>Technical requirements / programming skills to prepare high-quality corpora not to be underestimated.<br/>
 
-* **"Framework for Parsing Plenary Protocols" (R package _frapp_) ensures total replicability:**<br/>Replication as a precondition for quality management and improving the data from version to version.
+* **"Framework for Parsing Plenary Protocols" (R package _frappp_) ensures total replicability:**<br/>Replication as a precondition for quality management and improving the data from version to version.
 
 * **Related Work:** ParlSpeech-corpora [@Rauh2017], ParlaCLARIN Workshops [@FIŠER18.14; @PANČUR18.4; @OGRODNICZUK18.11; @WISSIK18.2; @GUNGOR18.19; @NANNI18.6]
 
@@ -52,7 +52,7 @@ use("PopParl")
 * OCR (Optical Character Recognition)
 * XML (eXtensible Markup Language)
 * TEI (Text Encoding Initiative)
-* regular expressions (automatisiertes pattern matching)
+* regular expressions (automated pattern matching)
 * programming in general (Perl/Python/Java/R)
 * object-oriented programming (=> framework)
 
@@ -62,9 +62,9 @@ use("PopParl")
 
 ## The TEI standard | GermaParlTEI as an example {.smaller}
  
-* consensus on TEI (cp. ParlaCLARIN Workshops, "Reichstagsprotokolle" of BBAW) - but no common in political science
+* consensus on TEI (cp. ParlaCLARIN Workshops, "Reichstagsprotokolle" of BBAW) - but not common in political science
 
-* TEI-XML is useful for standardisation, a data exchange format, to ensure interoperability (cp. FAIR principles) - it is not necessarily useful (= slow) for analysis
+* TEI-XML is useful for standardization, a data exchange format, to ensure interoperability (cp. FAIR principles) - it is not necessarily useful (= slow) for analysis
 
 ```{r, echo = FALSE}
 xml2::read_xml(x = "~/Nextcloud/Org/Termine/2019-02-14_Dreiländertagung/Präsentation/BT_16_060.xml") %>%
@@ -137,7 +137,7 @@ plaintext <- UN$pages %>% unlist() %>% unname()
 </div>
 <br/>
 
-* As a basis for our further workflows we save the 'plain text'-version of the protocol.
+* As a basis for our further workflows we save the 'plain text' version of the protocol.
 
 ```{r}
 undoc_tmp <- tempfile()
@@ -147,13 +147,13 @@ writeLines(text = plaintext, con = undoc_tmp)
 
 ## The R package 'frappp' {.smaller}
 
-* OOP (object-oriented programmint) is fundamental for the design of the _frappp_-package. The principle of **inheritance** is a basis for efficiency and flexibility. The design can be transferred to Python, Java etc.
+* OOP (object-oriented programming) is fundamental for the design of the _frappp_ package. The principle of **inheritance** is a basis for efficiency and flexibility. The design can be transferred to Python, Java etc.
 
 * The _frappp_ package opts for the R6 class system:
   - Thoroughly structured code for a strongly standardized workflow (as compared to S3, S4).
   - memory is used parsimoniously due to reference semantics: objects are not copied without necessity (as compared to S3, S4)
   - R6 is more efficient than R's default RefClasses (cp. [benchmarks](https://cran.r-project.org/web/packages/R6/vignettes/Performance.html))
-  - R6 classes can be extended across packages: The _frappp_ package is intended to serve as a basis for substantice projects of corpus preparation.
+  - R6 classes can be extended across packages: The _frappp_ package is intended to serve as a basis for substantive projects of corpus preparation.
 
 * The core class is the  _PlenaryProtocolParser_. It is available after loading the package.
 
@@ -516,10 +516,10 @@ plot_ly(x = dt[["parliament"]], y = dt[["size"]], type = "bar") %>%
 
 ## Perspectives {.smaller}
 
-* Reducing the marginal cost for processing material: *frappp* tries to supprt social science to gain a "data-rich future" [@King2011EnsuringTD]
+* Reducing the marginal cost for processing material: *frappp* tries to support social science to gain a "data-rich future" [@King2011EnsuringTD]
 
 * 100% replicability of research data:
-  - complete transperency of data preparation´.
+  - complete transparency of data preparation.
   - preconditions fulfilled for versioning data and for quality management.
 
 * Versioning the data:
@@ -528,12 +528,11 @@ plot_ly(x = dt[["parliament"]], y = dt[["size"]], type = "bar") %>%
 
 * The workflow is generic and portable (alternatives to R: Python, Java)
 
-* frappp oder frapp (framework for parsing protocols): Applicability on *any* protocol (not just plenary sessions, but also committees)
+* frappp or frapp (framework for parsing protocols): Applicability on *any* protocol (not just plenary sessions, but also committees)
 
 * A procedure that can be transferred to XMLify other materials, such as parliamentary questions?
 
 
 ## Bibliography {.verysmall}
-
 
 
